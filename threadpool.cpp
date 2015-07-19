@@ -3,9 +3,11 @@
 WorkerThread::WorkerThread(){}
 WorkerThread::~WorkerThread(){}
 
-void WorkerThread::StartThread()
+void WorkerThread::StartThread(int idx)
 {
     pthread_create(&m_thread_id,NULL,ThreadProc,this);
+    pthread_detach(m_thread_id);
+    m_idx = idx;
 }
 
 void* WorkerThread::ThreadProc(void* arg)
@@ -24,9 +26,8 @@ void WorkerThread::RunTask()
         Task* pTask = m_thread_pool->PopTask();
         if (!pTask)
             break;
-        cout<<"Thread "<<pthread_self()<<" RunTask begin "<<endl;
+        //cout<<"Thread "<<m_idx<<" Running Task "<<endl;
         pTask->Run();
-        cout<<"Thread "<<pthread_self()<<" RunTask end "<<endl;
     }
 }
 
@@ -46,12 +47,17 @@ ThreadPool::ThreadPool(int poolsize, bool bLinger):
 ThreadPool::~ThreadPool()
 {
     delete [] m_thread_pool;
+    
+    while(!m_task_queue.empty()){
+        Task* pTask = m_task_queue.front();
+        m_task_queue.pop();
+        delete pTask;
+    }
 }
 
 void ThreadPool::PushTask(Task* pTask)
 {
     m_notifier.Lock();
-    cout<<"Main Thread  "<<pthread_self()<<" PushTask begin "<<endl;
 
     if (m_bRunning){
         m_task_queue.push(pTask);
@@ -60,7 +66,6 @@ void ThreadPool::PushTask(Task* pTask)
         cout<<"Pool has been stopped! Could not add new task ..."<<endl;
     }
 
-    cout<<"Main Thread  "<<pthread_self()<<" PushTask end "<<endl;
     m_notifier.Unlock();
 }
 
@@ -94,6 +99,7 @@ Task* ThreadPool::PopTask()
     m_notifier.Unlock();
     return pTaskRet;
 }
+
 pthread_t ThreadPool::GetThreadId(int idx)
 {
     assert(idx >=0 && idx < m_pool_size);
@@ -105,11 +111,11 @@ void ThreadPool::PoolStart()
     if (!m_bRunning){
         m_bRunning = true;
         for (int i = 0; i < m_pool_size; ++i){
-            m_thread_pool[i].StartThread();
+            m_thread_pool[i].StartThread(i+1);
         }
-        cout<<"thread pool started ......."<<endl;
+        cout<<"thread pool started ..."<<endl;
     }else{
-        cout<<"thread pool already started ......."<<endl;
+        cout<<"thread pool already started ..."<<endl;
     }
 }
 

@@ -6,30 +6,24 @@ using namespace std;
 class DemoTask : public Task
 {
 public:
-    DemoTask(){}
+    DemoTask(void* param):Task(param){}
     ~DemoTask(){}
     void Run(){
-        sleep(1);
-        cout<<"Thread "<<pthread_self()<<"Execute task" <<endl;
+        usleep(100);
+        cout<<"Thread "<<pthread_self()<<" execute task "<<*(int*)m_param<<endl;
     }
 };
 
 int main(int argc, char const *argv[])
 {
-    ThreadPool *pPool = new ThreadPool(5,true);
+    ThreadPool *pPool = new ThreadPool(3,true);
     pPool->PoolStart();
 
-    for (int i = 0; i < 30; ++i)
-    {
-        pPool->PushTask(new DemoTask());
+    for (int i = 0; i < 30; ++i){
+        pPool->PushTask(new DemoTask(new int (i+1)));
     }
  
-    pPool->PoolStop();
-
-    for (int i = 0; i < pPool->GetPoolSize(); ++i)
-    {
-        pthread_t tid = pPool->GetThreadId(i);
-        pthread_join(tid,NULL);
-    }    
+    pPool->PoolStop(); 
+    sleep(48);
     return 0;
 }
